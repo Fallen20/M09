@@ -1,7 +1,6 @@
-package Sockets2;
+package EjercicioSocket;
 
 import java.io.*;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
@@ -10,15 +9,14 @@ import java.util.Scanner;
 public class SPU9_SERVER {
 
 	private static int puerto=9090;
-	private static int puertoFTP=9091;
 	private static boolean verMenu=true;
 	private static boolean acabarConexion=false;
 	private static boolean finConexion=false;
 	//private static String rutaEnvio ="/home/users/inf/wiam2/iam47264842/Escritorio/envio/";
 	//private static String rutaRecibir ="/home/users/inf/wiam2/iam47264842/Escritorio/sockets/";
 
-	private static String rutaEnvio ="C:\\Users\\monts\\Desktop\\a\\sockets\\dirServidor\\envio\\";
-	private static String rutaRecibir ="C:\\Users\\monts\\Desktop\\a\\sockets\\dirServidor\\recibir\\";
+	private static String rutaEnvio ="C:\\Users\\monts\\Desktop\\a\\sockets\\envio";
+	private static String rutaRecibir ="C:\\Users\\monts\\Desktop\\a\\sockets\\recibir";
 
 
 
@@ -136,7 +134,7 @@ public class SPU9_SERVER {
 
 	private static void ftp(boolean iniciado, Socket clientSocket, BufferedReader leeReader, PrintWriter printStream) {
 
-		String nombrArchivoEnvio="envioServidor.txt";
+		String nombrArchivoEnvio="datosApiAndroid.txt";
 		BufferedInputStream bufferedInputStream = null;
 		OutputStream outputStream = null;
 		BufferedOutputStream bufferedOutputStream=null;
@@ -153,23 +151,18 @@ public class SPU9_SERVER {
 			try {
 				recibido=leeReader.readLine();
 				System.out.println("SERVER: Mensaje recibido del cliente: "+recibido);
-				//recibe retorn_control
 
 			} catch (IOException e) {e.printStackTrace();}
 			
 			try {
-				printStream.println(nombrArchivoEnvio);//enviar el nombre
+				printStream.println(nombrArchivoEnvio);
 				printStream.flush();
 				
 				
 				File archivo=new File(rutaEnvio+nombrArchivoEnvio);
-				System.out.println(rutaEnvio+nombrArchivoEnvio);
-				printStream.println(archivo.length());//enviar el tamanio
+				printStream.println(archivo.length());
 				printStream.flush();
-
-				//abrir un nuevo socket
-				Socket socketFTP=establirConnexioTmpViaSocket(true, puertoFTP);
-
+				
 				
 				// envio, pero en array de bytes porque se envia en paquetes
 				byte[] arrayByteEnvio = new byte[1024 * 16];
@@ -179,8 +172,8 @@ public class SPU9_SERVER {
 				} catch (InterruptedException e) {e.printStackTrace();}
 
 				// leemos, enviamos
-				bufferedInputStream = new BufferedInputStream(new FileInputStream(archivo));//lee el fichero
-				outputStream = socketFTP.getOutputStream();//output es para enviarlo al cliente
+				bufferedInputStream = new BufferedInputStream(new FileInputStream(archivo));
+				outputStream = clientSocket.getOutputStream();
 
 				System.out.println("SERVER-FPT: Transmitiendo el archivo " + nombrArchivoEnvio + " - Total: "
 						+ archivo.length() + " bytes");
@@ -190,15 +183,13 @@ public class SPU9_SERVER {
 
 				while ((leido = bufferedInputStream.read(arrayByteEnvio)) > 0) {
 					// leido ahora lee en la sentencia del while, nos ahorra una linea debajo
-
+					//caracter= (char) leido;
 					outputStream.write(arrayByteEnvio, 0, leido);// escribe
 					outputStream.flush();
 
 					System.out.println("SERVER: Enviados " + leido + " bytes");
 				}
 				System.out.println("SERVER: Fin del envio de ficheros");
-
-				tancarSocketServidor(socketFTP);//cerramos el socket
 
 
 			} catch (FileNotFoundException e) {
@@ -222,7 +213,7 @@ public class SPU9_SERVER {
 			
 		}
 		
-		else {//recibe algo
+		else {//sino se ha iniciado el cliente
 			
 			retornControl(false, printStream);
 			
@@ -236,18 +227,16 @@ public class SPU9_SERVER {
 				int size=Integer.parseInt(size1);
 
 
+
 				System.out.println("SERVER: Nombre del archivo: "+archivoRecibido2);
 				System.out.println("SERVER: Tamanio del archivo: "+size+" bytes");
 				
 				System.out.println("SERVER-FTP: Recibiendo...");
-
-				//abrir un nuevo socket para recibir cosas
-				Socket socketFTP=establirConnexioTmpViaSocket(false, puertoFTP);
 				
 				byte [] arrayBytesRecibir  = new byte [1024*16];
 				
-				inputStream=socketFTP.getInputStream();//lee el fichero que nos envian
-				bufferedOutputStream=new BufferedOutputStream(new FileOutputStream(archivoRecibido2Ruta));//escribe el fichero que nos envia
+				inputStream=clientSocket.getInputStream();
+				bufferedOutputStream=new BufferedOutputStream(new FileOutputStream(archivoRecibido2Ruta));
 				
 				int leido=-1;
 				int bytesRecibidos=0;
@@ -267,58 +256,14 @@ public class SPU9_SERVER {
 				
 				System.out.println("SERVER: Archivo recibido. Recogidos "+bytesRecibidos+" bytes");
 
-				//cerramos socket
-				tancarSocketServidor(socketFTP);
-
-				//enviamos bytes recibidos
 				printStream.println("SERVER: FINALITZAT_FTP: Recibidos "+bytesRecibidos+" bytes en el servidor");
 				printStream.flush();
-
 				
 				
 				
 			} catch (IOException e) {e.printStackTrace();}
 			
 		}
-	}
-
-	private static Socket establirConnexioTmpViaSocket(boolean enviaArchivos, int puerto) {
-
-		if(enviaArchivos){
-
-			try {
-				ServerSocket abridorSocketFPT = new ServerSocket(puerto);//esto abre el puerto
-
-				Socket socketFPT = abridorSocketFPT.accept();//esto es la conexion con el cliente
-
-				return socketFPT;
-
-			} catch (IOException e) {e.printStackTrace();}
-		}
-		else if(!enviaArchivos){
-			try {
-				Thread.sleep(500);//dormimos
-			} catch (InterruptedException e) {e.printStackTrace();}
-
-			String direccionIP = "127.0.0.1";
-
-			InetSocketAddress inetSocketAddress=new InetSocketAddress(direccionIP,puerto);//ip y puerto
-
-			//crear socket
-			Socket socketConexion=new Socket();
-
-
-			while(!socketConexion.isConnected()){
-				//for hasta que se conecte
-				try {
-					socketConexion.connect(inetSocketAddress);//conectar con el inet
-
-				} catch (IOException e) {e.printStackTrace();}
-			}
-
-			return socketConexion;//cuando se conecta ,lo devuelves
-		}
-		return null;
 	}
 
 	public static void menuServer(Socket clientSocket, BufferedReader leeReader, PrintWriter printStream)
@@ -498,12 +443,7 @@ public class SPU9_SERVER {
 
 	private static void tancarSocketServidor(Socket clientSocket) {
 
-		if(clientSocket.getPort()==puertoFTP){
-			System.out.println("Cerrando socket temporal");
-		}
-		else{
-			System.out.println("Cerrando socket");
-		}
+		System.out.println("Cerrando socket");
 
 			if ((clientSocket != null) && (!clientSocket.isClosed())) {// sino esta cerrado de antes
 				try {
